@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Sentinel | About</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="brand">Cipher Sentinel</div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Home</a>
+            <a class="nav-link" href="analyzer.html">Analyzer</a>
+            <a class="nav-link" href="metrics.html">Metrics</a>
+            <a class="nav-link active" href="about.html">About</a>
+        </div>
+    </nav>
+
+    <section class="hero glass-panel page-header">
+        <h1 class="glitch-title">Stack & Methodology</h1>
+        <p class="subtitle">How the fake-news classifier is built, evaluated and served.</p>
+    </section>
+
+    <section class="about glass-panel">
+        <h2>Technological Pipeline</h2>
+        <div class="about-grid">
+            <div class="about-card">
+                <h4>Architecture</h4>
+                <p>Preprocessing and inference run through Python modules with deterministic text cleaning and reusable model artifacts.</p>
+            </div>
+            <div class="about-card">
+                <h4>Deployment Stack</h4>
+                <p>Flask API exposes prediction and stats endpoints while the frontend consumes them directly with fetch-based calls.</p>
+            </div>
+            <div class="about-card">
+                <h4>Anti-Leakage Measures</h4>
+                <p>Training uses stratified splits and evaluation metrics persisted to JSON for traceable and reproducible model reporting.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>Cipher Sentinel v2.0. Built by the Next-Gen Team.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

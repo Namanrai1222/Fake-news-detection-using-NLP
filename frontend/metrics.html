@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Sentinel | Metrics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="brand">Cipher Sentinel</div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Home</a>
+            <a class="nav-link" href="analyzer.html">Analyzer</a>
+            <a class="nav-link active" href="metrics.html">Metrics</a>
+            <a class="nav-link" href="about.html">About</a>
+        </div>
+    </nav>
+
+    <section class="hero glass-panel page-header">
+        <h1 class="glitch-title">Model Performance Core</h1>
+        <p class="subtitle">Live evaluation metrics pulled from backend training artifacts.</p>
+    </section>
+
+    <section class="metrics-eval glass-panel">
+        <h2>Performance Snapshot</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Validation Accuracy</h4>
+                <div class="stat-number" id="val-accuracy">--%</div>
+            </div>
+            <div class="stat-card">
+                <h4>F1 Validation Score</h4>
+                <div class="stat-number" id="val-f1">--</div>
+            </div>
+            <div class="stat-card">
+                <h4>Cross-Validation Run</h4>
+                <div class="stat-number">5-Fold</div>
+            </div>
+            <div class="stat-card">
+                <h4>Dataset Size</h4>
+                <div class="stat-number" id="total-articles">--</div>
+            </div>
+            <div class="stat-card">
+                <h4>Calibration Error (ECE)</h4>
+                <div class="stat-number" id="val-ece">--</div>
+            </div>
+            <div class="stat-card">
+                <h4>Brier Score</h4>
+                <div class="stat-number" id="val-brier">--</div>
+            </div>
+        </div>
+
+        <div class="chart-wrapper">
+            <h3>Confusion Matrix Layout</h3>
+            <div class="matrix-grid">
+                <div class="matrix-cell label-cell"></div>
+                <div class="matrix-cell label-cell">Predicted Fake</div>
+                <div class="matrix-cell label-cell">Predicted Real</div>
+
+                <div class="matrix-cell label-cell">Actual Fake</div>
+                <div class="matrix-cell data-cell" id="cm-00" style="background: rgba(121, 40, 202, 0.2)">--</div>
+                <div class="matrix-cell data-cell" id="cm-01" style="background: rgba(40, 202, 120, 0.2)">--</div>
+
+                <div class="matrix-cell label-cell">Actual Real</div>
+                <div class="matrix-cell data-cell" id="cm-10" style="background: rgba(202, 40, 80, 0.2)">--</div>
+                <div class="matrix-cell data-cell" id="cm-11" style="background: rgba(40, 202, 202, 0.2)">--</div>
+            </div>
+        </div>
+
+        <div class="calibration-panel">
+            <h3>Calibration Trend</h3>
+            <p id="calibration-summary" class="verification-details">Calibration quality will appear here.</p>
+
+            <div class="calibration-row">
+                <span>ECE</span>
+                <div class="mini-track"><div id="ece-bar" class="mini-fill"></div></div>
+                <span id="ece-text">--</span>
+            </div>
+
+            <div class="calibration-row">
+                <span>Brier</span>
+                <div class="mini-track"><div id="brier-bar" class="mini-fill"></div></div>
+                <span id="brier-text">--</span>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>Cipher Sentinel v2.0. Built by the Next-Gen Team.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

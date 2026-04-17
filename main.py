@@ -7,19 +7,28 @@ from sklearn.model_selection import train_test_split
 
 
 def main():
-    print("Loading data...")
+    print("Loading and cleaning data...")
     data = load_data(FAKE_DATA_PATH, TRUE_DATA_PATH)
 
-    print("Cleaning text...")
+    print("Cleaning text (this may take a few minutes)...")
     data["cleaned"] = data["text"].apply(clean_text)
 
-    print("Splitting dataset...")
+    # After cleaning, some texts might become empty or very short. Filter again just in case
+    initial_len = len(data)
+    data = data[data["cleaned"].str.len() > 0]
+    print(f"Dropped {initial_len - len(data)} records that became empty after strict cleaning.")
+
+    print("Splitting dataset (Stratified)...")
     X_train, X_test, y_train, y_test = train_test_split(
         data["cleaned"],
         data["label"],
         test_size=0.2,
-        random_state=42
+        random_state=42,
+        stratify=data["label"]  # MANDATORY FIX: Stratification prevents class imbalance leakage
     )
+
+    print(f"Training split: {len(X_train)} samples")
+    print(f"Testing split: {len(X_test)} samples")
 
     print("Training TF-IDF model...")
     model, vectorizer = train_model(

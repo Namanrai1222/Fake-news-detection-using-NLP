@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Sentinel | Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="brand">Cipher Sentinel</div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Home</a>
+            <a class="nav-link active" href="analyzer.html">Analyzer</a>
+            <a class="nav-link" href="metrics.html">Metrics</a>
+            <a class="nav-link" href="about.html">About</a>
+        </div>
+    </nav>
+
+    <section class="hero glass-panel page-header">
+        <h1 class="glitch-title">Live Forensics Analyzer</h1>
+        <p class="subtitle">Paste news content and execute model analysis with explanation outputs.</p>
+    </section>
+
+    <section class="demo glass-panel" id="demo-target">
+        <h2>Run Analysis</h2>
+        <div class="demo-grid">
+            <div class="input-pane">
+                <textarea id="news-text" placeholder="Paste narrative data here. Minimum 20 words for rigorous classification." aria-label="Input raw news data"></textarea>
+                <div class="input-actions">
+                    <label class="llm-toggle-row" for="llm-toggle">
+                        <input type="checkbox" id="llm-toggle" checked>
+                        <span>Use LLM explanation (Ollama)</span>
+                    </label>
+                    <label class="llm-toggle-row" for="ensemble-toggle">
+                        <input type="checkbox" id="ensemble-toggle" checked>
+                        <span>Use Ensemble Decision Layer</span>
+                    </label>
+                    <button class="neon-btn analyze-btn" id="analyze-btn">Execute Analysis</button>
+                </div>
+                <div id="loader" class="hidden">
+                    <div class="spinner"></div><span class="loading-text" id="loading-msg">Synthesizing matrices...</span>
+                </div>
+            </div>
+
+            <div class="results-pane hidden" id="results-target">
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <span class="m-label">PREDICTION</span>
+                        <div class="pred-wrapper">
+                            <span id="pred-badge" class="result-badge">--</span>
+                        </div>
+                    </div>
+                    <div class="metric-box">
+                        <span class="m-label">CONFIDENCE</span>
+                        <div class="conf-row">
+                            <div class="prog-track"><div id="conf-prog" class="prog-fill"></div></div>
+                            <span id="conf-pct">--%</span>
+                        </div>
+                        <small id="conf-note" class="conf-note">Calibrated confidence shown.</small>
+                    </div>
+                    <div class="metric-box">
+                        <span class="m-label">BIAS HAZARD</span>
+                        <span id="bias-risk" class="bias-badge">--</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="m-label">RELIABILITY BAND</span>
+                        <span id="reliability-band" class="bias-badge">--</span>
+                    </div>
+                </div>
+
+                <div class="lime-section">
+                    <h4>Feature Signals</h4>
+                    <ul id="lime-explanation" class="lime-list"></ul>
+                </div>
+
+                <div class="reasoning-section">
+                    <h4>Reasoning</h4>
+                    <ul id="reasoning-list" class="reasoning-list"></ul>
+                </div>
+
+                <div class="verification-section">
+                    <h4>Fact-Check Verification</h4>
+                    <p id="verification-status" class="verification-status">Verification pending.</p>
+                    <p id="verification-details" class="verification-details"></p>
+                </div>
+
+                <div class="legend-section">
+                    <h4>Reliability Legend</h4>
+                    <div class="legend-row"><span class="legend-dot legend-high"></span><span>High: score >= 0.80</span></div>
+                    <div class="legend-row"><span class="legend-dot legend-medium"></span><span>Medium: score >= 0.60 and &lt; 0.80</span></div>
+                    <div class="legend-row"><span class="legend-dot legend-low"></span><span>Low: score &lt; 0.60</span></div>
+                </div>
+
+                <div class="llm-section">
+                    <h4>Optional LLM Summary</h4>
+                    <p id="llm-explanation" class="llm-explanation">Optional Ollama explanation will appear here when enabled.</p>
+                </div>
+
+                <div class="bias-indicators">
+                    <h4>Source Identifiers</h4>
+                    <ul id="bias-hints"></ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>Cipher Sentinel v2.0. Built by the Next-Gen Team.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
