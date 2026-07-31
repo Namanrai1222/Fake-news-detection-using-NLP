@@ -1,84 +1,100 @@
-# Fake-news-detection-using-NLP
+# Fake News Detection using NLP
 
-## Optional Ollama Explanation Layer
+A machine learning system that classifies news articles as real or fake using NLP feature extraction and a scikit-learn classifier, with an optional local LLM layer for natural-language explanations.
 
-This project keeps the sklearn classifier as the primary prediction engine.
-Ollama is optional and only used to generate a short natural-language explanation.
+[![Python](https://img.shields.io/badge/Python-54.6%25-blue)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Backend-Flask-black)](https://flask.palletsprojects.com/)
+[![scikit-learn](https://img.shields.io/badge/ML-scikit--learn-orange)](https://scikit-learn.org/)
 
-### Behavior
+## Overview
 
-- Primary prediction: sklearn model (deterministic and fast).
-- Optional explanation: Ollama local model.
-- Safe fallback: if Ollama is unavailable, prediction still succeeds and response returns without LLM text.
+This project detects misinformation in news text using a classical NLP + machine learning pipeline. It's designed with a clear separation between the deterministic ML model (fast, reproducible) and an optional generative layer (Ollama) that explains predictions in plain English - the system never depends on the LLM to function.
 
-### Recommended Small Models
+## Key Features
 
-- tinyllama
-- llama3.2:1b
-- qwen2.5:0.5b (if stable on your machine)
+- **Primary prediction engine**: scikit-learn classifier trained on news text features - deterministic and fast
+- **Optional AI explanation layer**: local Ollama models (tinyllama, llama3.2:1b, qwen2.5:0.5b) generate a short natural-language rationale for each prediction, with automatic safe fallback if Ollama is unavailable
+- **Confidence calibration**: a dedicated calibration utility (`src/calibrate_existing`) improves confidence score reliability without full retraining
+- **Bias checking**: includes a `bias_check.py` utility to evaluate model fairness across inputs
+- **Explainability**: LIME-based debugging (`debug_lime.py`) for inspecting model decisions
+- **Production-hardened API**: restricted CORS, request size limits, per-IP rate limiting, minimal error leakage on `/health`, and optional API-key auth
 
-### Run Ollama (Optional)
+## Tech Stack
 
-1. Start Ollama server (separate terminal):
-	- ollama serve
-2. Pull a small model:
-	- ollama pull tinyllama
-	- or: ollama pull llama3.2:1b
+| Layer | Technology |
+|---|---|
+| ML / Data | Python, scikit-learn, pandas, NumPy |
+| Backend API | Flask |
+| Frontend | HTML, CSS, JavaScript |
+| Optional LLM | Ollama (local inference, e.g. tinyllama) |
+| Explainability | LIME |
 
-### Enable in Backend
+## Architecture
 
-Set environment variables before starting Flask:
-
-- OLLAMA_ENABLED=1
-- OLLAMA_MODEL=tinyllama (or llama3.2:1b)
-- OLLAMA_URL=http://127.0.0.1:11434/api/generate
-- OLLAMA_TIMEOUT_SECONDS=8
-
-PowerShell example:
-
-1. $env:OLLAMA_ENABLED='1'
-2. $env:OLLAMA_MODEL='tinyllama'
-3. $env:OLLAMA_URL='http://127.0.0.1:11434/api/generate'
-4. .\venv\Scripts\python.exe app\app.py
-
-### API Response
-
-The /predict response now includes:
-
-- llm_explanation: optional string from Ollama
-- llm_provider: "ollama" when explanation is returned
-
-## Confidence Calibration Utility
-
-To improve confidence reliability without retraining from scratch, run:
-
-1. .\\venv\\Scripts\\python.exe -m src.calibrate_existing
-
-This creates models/calibrator.pkl, which is loaded automatically by the backend.
+- `app/` - Flask backend serving the `/predict` and `/stats` endpoints
+- `src/` - core ML pipeline, including the confidence calibrator
+- `models/` - trained classifier and calibrator artifacts
+- `notebooks/` - exploratory data analysis and model development
+- `frontend/` - client UI for submitting articles and viewing predictions
+- `tests/` - test suite
 
 ## Security Hardening
 
-The backend now includes safer defaults to reduce API/data exposure risks.
-
-### Enabled by default
+Since this exposes a public-facing prediction API, it includes production safeguards by default:
 
 - Restricted CORS allowlist (localhost + 127.0.0.1 development origins)
-- Request body size limit (MAX_REQUEST_BYTES)
-- In-memory rate limiting (per client IP)
+- Request body size limit (`MAX_REQUEST_BYTES`)
+- In-memory per-IP rate limiting
 - Minimal `/health` output (no internal URLs/errors unless explicitly enabled)
-- Structured API responses (`status: success|error`, `error` field)
+- Structured API responses (`status: success|error`)
+- Secrets (`APP_API_KEY`, `GOOGLE_FACTCHECK_API_KEY`) are server-side only, never exposed to frontend code
 
 ### Optional production settings
 
-Set these environment variables in production:
+- `APP_API_KEY`: require `X-API-Key` header for `/predict` and `/stats`
+- `ALLOWED_ORIGINS`: comma-separated trusted frontend origins
+- `APP_HOST`: use `127.0.0.1` by default; avoid `0.0.0.0` unless needed
+- `APP_DEBUG=0`
+- `HEALTH_DETAILS=0`
 
-- APP_API_KEY: require `X-API-Key` for `/predict` and `/stats`
-- ALLOWED_ORIGINS: comma-separated trusted frontend origins
-- APP_HOST: use `127.0.0.1` by default; avoid `0.0.0.0` unless needed
-- APP_DEBUG=0
-- HEALTH_DETAILS=0
+## Getting Started
 
-### Important
+```bash
+python -m venv venv
+venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+python app/app.py
+```
 
-- Do NOT put API keys in frontend JavaScript or HTML.
-- Keep `GOOGLE_FACTCHECK_API_KEY` and `APP_API_KEY` server-side only.
+### Optional: enable the LLM explanation layer
+
+```powershell
+$env:OLLAMA_ENABLED='1'
+$env:OLLAMA_MODEL='tinyllama'
+$env:OLLAMA_URL='http://127.0.0.1:11434/api/generate'
+ollama serve
+ollama pull tinyllama
+```
+
+### Optional: improve confidence calibration
+
+```bash
+python -m src.calibrate_existing
+```
+
+This creates `models/calibrator.pkl`, loaded automatically by the backend.
+
+## API Response
+
+`/predict` returns a structured JSON response including the classification and confidence score. When Ollama is enabled, the response also includes:
+
+- `llm_explanation`: optional natural-language rationale
+- `llm_provider`: `"ollama"` when an explanation is returned
+
+## What I Learned
+
+Building this project involved balancing model interpretability with production safety - keeping the core classifier deterministic while layering in an optional LLM explanation without introducing a hard dependency, plus hardening a public ML API against common exposure risks (CORS misconfiguration, unbounded request size, missing rate limits).
+
+## License
+
+MIT
