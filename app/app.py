@@ -39,6 +39,7 @@ model_loading = True
 model_error = None
 _predictor_obj = None
 _model_ready_event = threading.Event()
+MODEL_INIT_TIMEOUT_SECONDS = int(os.environ.get('MODEL_INIT_TIMEOUT_SECONDS', '120'))
 
 OLLAMA_ENABLED = os.environ.get('OLLAMA_ENABLED', '0').lower() in ('1', 'true', 'yes', 'on')
 OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
@@ -88,6 +89,7 @@ def _load_model_async():
         if predictor.model is not None and predictor.vectorizer is not None:
             predict_fn = predictor.predict
             explain_fn = None
+            model_error = None
             print(f"[OK] Core Engine Loaded. Vectorizer Features: {len(predictor.vectorizer.vocabulary_)}")
         else:
             model_error = predictor.load_error or "Model files not found. Run training script main.py first."
@@ -103,17 +105,25 @@ def _load_model_async():
 threading.Thread(target=_load_model_async, daemon=True, name="model-loader").start()
 
 
-def _model_watchdog(timeout_seconds: int = 20):
-    """Fail fast if model loading blocks unexpectedly on dependency import/load."""
-    global model_loading, model_error
+def _model_watchdog(timeout_seconds: int):
+    """Warn when startup is slow, but do not mark it as a hard backend failure."""
+    global model_error
     if _model_ready_event.wait(timeout_seconds):
         return
-    model_error = "Model initialization timed out. Check Python/scipy/sklearn compatibility and model files."
-    model_loading = False
-    logging.error(model_error)
+    warning_msg = (
+        "Model initialization is taking longer than expected. "
+        "Backend will keep waiting until load completes."
+    )
+    model_error = warning_msg
+    logging.warning(warning_msg)
 
 
-threading.Thread(target=_model_watchdog, daemon=True, name="model-watchdog").start()
+threading.Thread(
+    target=_model_watchdog,
+    args=(MODEL_INIT_TIMEOUT_SECONDS,),
+    daemon=True,
+    name="model-watchdog",
+).start()
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 BIAS_SOURCE_PATTERNS = {
@@ -424,7 +434,9 @@ def predict():
 
     if model_loading:
         return _error_response("System is currently initializing AI models. Please hold.", 503)
-    if model_error:
+    # Treat model_error as fatal only when no usable predictor is available.
+    # This avoids blocking requests on non-fatal warmup warnings.
+    if model_error and predict_fn is None:
         return _error_response(f"Engine critical failure: {model_error}", 500)
     if not predict_fn:
         return _error_response("Predictor engine is unresponsive.", 503)
@@ -623,8 +635,14 @@ def stats():
 
 @app.route('/health', methods=['GET'])
 def health():
+    health_status = "healthy"
+    if model_loading:
+        health_status = "initializing"
+    elif model_error and predict_fn is None:
+        health_status = "degraded"
+
     base = {
-        "status": "healthy",
+        "status": health_status,
         "model_loaded": predict_fn is not None,
     }
 

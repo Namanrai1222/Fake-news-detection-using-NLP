@@ -95,6 +95,43 @@ This creates `models/calibrator.pkl`, loaded automatically by the backend.
 
 Building this project involved balancing model interpretability with production safety - keeping the core classifier deterministic while layering in an optional LLM explanation without introducing a hard dependency, plus hardening a public ML API against common exposure risks (CORS misconfiguration, unbounded request size, missing rate limits).
 
+## Security Reminders
+
+- Do NOT put API keys in frontend JavaScript or HTML.
+- Keep `GOOGLE_FACTCHECK_API_KEY` and `APP_API_KEY` server-side only.
+
+## Backend Reachability Notes (Windows)
+
+If your backend becomes unreachable when the laptop lid is closed, this is expected for local hosting.
+When Windows enters Sleep/Hibernate, Python/Flask pauses and network access stops.
+
+### Reliable Startup Commands
+
+From project root:
+
+1. Local-only backend (same machine):
+
+	- `./start_backend_local.ps1`
+
+2. LAN backend (other devices in same network):
+
+	- `./start_backend_lan.ps1`
+
+Then verify health:
+
+- `Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing`
+
+### Why It Fails After Closing Laptop
+
+- Lid close usually triggers Sleep/Hibernate.
+- Sleep stops active server work and network stack.
+- Result: frontend or other devices cannot reach Flask until machine wakes.
+
+### If You Need Always-On Access
+
+- Keep machine awake while plugged in (Power settings).
+- Or deploy backend to an always-on host (cloud VM, container platform, etc.).
+
 ## License
 
 MIT

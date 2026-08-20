@@ -109,7 +109,12 @@ async function handleAnalysis() {
             response = { ok: false, status: 400 };
         }
 
-        if (response.status === 503 && String(data.error || '').toLowerCase().includes('initializing')) {
+        const backendError = String(data.error || '').toLowerCase();
+        const warmupError =
+            (response.status === 503 && backendError.includes('initializing')) ||
+            backendError.includes('model initialization timed out');
+
+        if (warmupError) {
             loadingMsg.textContent = 'Model is warming up. Retrying shortly...';
             const isReady = await waitForModelReady(8, 1200);
             if (isReady) {
@@ -119,6 +124,11 @@ async function handleAnalysis() {
                     body: JSON.stringify({ text: textBase, use_llm: useLLM, use_ensemble: useEnsemble })
                 });
                 data = await response.json().catch(() => ({}));
+            } else {
+                response = { ok: false, status: 503 };
+                data = {
+                    error: 'Model is still loading. Please wait a bit and try again.'
+                };
             }
         }
 
