@@ -68,6 +68,7 @@ def read_only_makedirs(path, *args, **kwargs):
 with patch('os.path.exists', side_effect=read_only_exists), patch('os.makedirs', side_effect=read_only_makedirs):
     from app.app import app
 assert app is not None
+assert app.test_client().get('/health').json['model_loaded'] is True
 '''
     result = subprocess.run([sys.executable, '-c', probe], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr

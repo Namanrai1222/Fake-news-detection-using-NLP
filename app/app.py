@@ -34,8 +34,6 @@ explain_fn = None
 model_loading = True
 model_error = None
 _predictor_obj = None
-_model_ready_event = threading.Event()
-MODEL_INIT_TIMEOUT_SECONDS = int(os.environ.get('MODEL_INIT_TIMEOUT_SECONDS', '120'))
 
 OLLAMA_ENABLED = os.environ.get('OLLAMA_ENABLED', '0').lower() in ('1', 'true', 'yes', 'on')
 OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
@@ -86,7 +84,7 @@ def _to_bool(value, default=False):
 # Since Predictor dynamically loads MODEL_PATH and VECTORIZER_PATH from config, 
 # updating config.py earlier implicitly maps _v2 files for this load.
 
-def _load_model_async():
+def _load_model():
     global predict_fn, explain_fn, model_loading, model_error, _predictor_obj
     try:
         from src.predict import Predictor
@@ -108,31 +106,9 @@ def _load_model_async():
         print(f"[ERROR] {model_error}")
         traceback.print_exc()
     finally:
-        _model_ready_event.set()
         model_loading = False
 
-threading.Thread(target=_load_model_async, daemon=True, name="model-loader").start()
-
-
-def _model_watchdog(timeout_seconds: int):
-    """Warn when startup is slow, but do not mark it as a hard backend failure."""
-    global model_error
-    if _model_ready_event.wait(timeout_seconds):
-        return
-    warning_msg = (
-        "Model initialization is taking longer than expected. "
-        "Backend will keep waiting until load completes."
-    )
-    model_error = warning_msg
-    logging.warning(warning_msg)
-
-
-threading.Thread(
-    target=_model_watchdog,
-    args=(MODEL_INIT_TIMEOUT_SECONDS,),
-    daemon=True,
-    name="model-watchdog",
-).start()
+_load_model()
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 BIAS_SOURCE_PATTERNS = {
