@@ -1,20 +1,220 @@
 {
-    "model_metrics": {
-        "accuracy": 0.9547,
-        "precision": 0.9922,
-        "recall": 0.9256,
-        "f1_score": 0.9577,
-        "brier_score": 0.0433,
-        "ece": 0.1065,
-        "confusion_matrix": [
-            [
-                3365,
-                31
-            ],
-            [
-                315,
-                3921
-            ]
+  "model_metrics": {
+    "sample_count": 5998,
+    "accuracy": 0.9408,
+    "precision": 0.9431,
+    "recall": 0.9491,
+    "f1_score": 0.9461,
+    "brier_score": 0.045,
+    "ece": 0.0101,
+    "confusion_matrix": [
+      [
+        2528,
+        188
+      ],
+      [
+        167,
+        3115
+      ]
+    ]
+  },
+  "source_metrics": {
+    "ISOT": {
+      "sample_count": 3765,
+      "accuracy": 0.9745,
+      "precision": 0.9593,
+      "recall": 0.9951,
+      "f1_score": 0.9769,
+      "brier_score": 0.0205,
+      "ece": 0.0257,
+      "confusion_matrix": [
+        [
+          1641,
+          86
+        ],
+        [
+          10,
+          2028
         ]
+      ]
+    },
+    "WELFake_nonoverlap": {
+      "sample_count": 2233,
+      "accuracy": 0.884,
+      "precision": 0.9142,
+      "recall": 0.8738,
+      "f1_score": 0.8935,
+      "brier_score": 0.0865,
+      "ece": 0.0305,
+      "confusion_matrix": [
+        [
+          887,
+          102
+        ],
+        [
+          157,
+          1087
+        ]
+      ]
     }
+  },
+  "general_news": {
+    "sample_count": 6665,
+    "false_positive_rate": 0.0086,
+    "by_topic": {
+      "World": {
+        "sample_count": 1638,
+        "false_positive_rate": 0.0067
+      },
+      "Sports": {
+        "sample_count": 1698,
+        "false_positive_rate": 0.0029
+      },
+      "Business": {
+        "sample_count": 1729,
+        "false_positive_rate": 0.004
+      },
+      "Sci/Tech": {
+        "sample_count": 1600,
+        "false_positive_rate": 0.0213
+      }
+    },
+    "note": "AG News has topic labels, not verified truth labels; this is a publisher-news stress test."
+  },
+  "dataset": "ISOT + nonoverlapping WELFake articles; optional AG News weak real-news augmentation",
+  "total_articles": 59820,
+  "split_sizes": {
+    "train": 41838,
+    "validation": 5984,
+    "calibration": 6000,
+    "test": 5998
+  },
+  "selected_model": {
+    "ag_examples": 12000,
+    "features": 40000,
+    "C": 1.0,
+    "train_f1": 0.965,
+    "validation_f1": 0.9467,
+    "validation_source_f1": {
+      "ISOT": 0.979,
+      "WELFake": 0.8912
+    },
+    "validation_general_news_false_positive_rate": 0.008
+  },
+  "candidates": [
+    {
+      "ag_examples": 0,
+      "features": 5000,
+      "C": 1.0,
+      "train_f1": 0.9627,
+      "validation_f1": 0.9531,
+      "validation_source_f1": {
+        "ISOT": 0.976,
+        "WELFake": 0.9139
+      },
+      "validation_general_news_false_positive_rate": 0.5515
+    },
+    {
+      "ag_examples": 6000,
+      "features": 5000,
+      "C": 1.0,
+      "train_f1": 0.9558,
+      "validation_f1": 0.9466,
+      "validation_source_f1": {
+        "ISOT": 0.9772,
+        "WELFake": 0.8943
+      },
+      "validation_general_news_false_positive_rate": 0.047
+    },
+    {
+      "ag_examples": 12000,
+      "features": 40000,
+      "C": 1.0,
+      "train_f1": 0.965,
+      "validation_f1": 0.9467,
+      "validation_source_f1": {
+        "ISOT": 0.979,
+        "WELFake": 0.8912
+      },
+      "validation_general_news_false_positive_rate": 0.008
+    },
+    {
+      "ag_examples": 12000,
+      "features": 40000,
+      "C": 0.3,
+      "train_f1": 0.9395,
+      "validation_f1": 0.9314,
+      "validation_source_f1": {
+        "ISOT": 0.976,
+        "WELFake": 0.8531
+      },
+      "validation_general_news_false_positive_rate": 0.005
+    }
+  ],
+  "learning_curve": [
+    {
+      "training_fraction": 0.25,
+      "train_article_f1": 0.9572,
+      "validation_article_f1": 0.9211
+    },
+    {
+      "training_fraction": 0.5,
+      "train_article_f1": 0.9608,
+      "validation_article_f1": 0.9371
+    },
+    {
+      "training_fraction": 1.0,
+      "train_article_f1": 0.965,
+      "validation_article_f1": 0.9467
+    }
+  ],
+  "welfake_reversed_label_anchor_count": 37653,
+  "training_date": "2026-10-28",
+  "evaluation_note": "Article holdouts are grouped by headline; AG News false positives are a weak-label stress test, not fact verification.",
+  "general_news_full_articles": {
+    "sample_count": 2218,
+    "flagged_fake_rate": 0.0234,
+    "by_topic": {
+      "business": {
+        "sample_count": 510,
+        "flagged_fake_rate": 0.002
+      },
+      "entertainment": {
+        "sample_count": 383,
+        "flagged_fake_rate": 0.0366
+      },
+      "politics": {
+        "sample_count": 414,
+        "flagged_fake_rate": 0.0169
+      },
+      "sport": {
+        "sample_count": 511,
+        "flagged_fake_rate": 0.002
+      },
+      "tech": {
+        "sample_count": 400,
+        "flagged_fake_rate": 0.0725
+      }
+    },
+    "note": "BBC articles are publisher news, not independently fact-checked truth labels."
+  },
+  "external_evaluation": {
+    "dataset": "LIAR official test split, strict binary subset",
+    "sample_count": 790,
+    "accuracy": 0.5759,
+    "f1_score": 0.7124,
+    "balanced_accuracy": 0.5208,
+    "confusion_matrix": [
+      [
+        40,
+        301
+      ],
+      [
+        34,
+        415
+      ]
+    ],
+    "majority_baseline_accuracy": 0.5684,
+    "note": "Out-of-domain political claims; not used in article model training or selection."
+  }
 }

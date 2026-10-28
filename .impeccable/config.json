@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "frontend/metrics.html"
+        ],
+        "createdAt": "2026-10-28T16:54:14.378Z",
+        "reason": "Agent: rendered Evidence sections have 12px horizontal inset, and the colored section has 20px; detector does not resolve linked CSS"
+      },
+      {
+        "rule": "em-dash-overuse",
+        "value": "*",
+        "files": [
+          "frontend/metrics.html"
+        ],
+        "createdAt": "2026-10-28T16:54:22.231Z",
+        "reason": "Agent: the em dashes are metric loading placeholders, not body-copy punctuation"
+      }
+    ]
+  }
+}

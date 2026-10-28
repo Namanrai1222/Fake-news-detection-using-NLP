@@ -32,48 +32,21 @@ class Predictor:
     def load_model(self):
         _apply_windows_platform_workaround()
 
-        candidate_pairs = [
-            (MODEL_PATH, VECTORIZER_PATH),
-            (os.path.join(BASE_DIR, "models", "model.pkl"), os.path.join(BASE_DIR, "models", "vectorizer.pkl")),
-            (os.path.join(BASE_DIR, "models", "model_v2.pkl"), os.path.join(BASE_DIR, "models", "vectorizer_v2.pkl")),
-        ]
-
-        selected_pair = next(
-            ((m, v) for (m, v) in candidate_pairs if os.path.exists(m) and os.path.exists(v)),
-            None,
-        )
-
-        if not selected_pair:
-            self.load_error = (
-                "Model files not found. Expected one of these pairs: "
-                + "; ".join([f"({m}, {v})" for (m, v) in candidate_pairs])
-            )
-            print(self.load_error)
+        calibrator_path = os.path.join(BASE_DIR, "models", "calibrator.pkl")
+        if not all(os.path.exists(path) for path in (MODEL_PATH, VECTORIZER_PATH, calibrator_path)):
+            self.load_error = "Trained model artifacts missing. Run python main.py."
             return
-
-        model_path, vectorizer_path = selected_pair
         try:
-            self.model = joblib.load(model_path)
-            self.vectorizer = joblib.load(vectorizer_path)
-            print(f"Loaded model from: {model_path}")
-            print(f"Loaded vectorizer from: {vectorizer_path}")
-
-            calibrator_path = os.path.join(BASE_DIR, "models", "calibrator.pkl")
-            if os.path.exists(calibrator_path):
-                self.calibrator = joblib.load(calibrator_path)
-                print(f"Loaded calibrator from: {calibrator_path}")
+            self.model = joblib.load(MODEL_PATH)
+            self.vectorizer = joblib.load(VECTORIZER_PATH)
+            self.calibrator = joblib.load(calibrator_path)
         except Exception as exc:
-            self.load_error = f"Model load failed for pair ({model_path}, {vectorizer_path}): {exc}"
-            print(self.load_error)
+            self.model = self.vectorizer = self.calibrator = None
+            self.load_error = f"Model load failed: {exc}"
 
-    def _calibrate_confidence(self, positive_prob: float) -> float:
-        if self.calibrator is None:
-            return float(positive_prob)
-        try:
-            calibrated = self.calibrator.predict(np.array([positive_prob]))[0]
-            return float(np.clip(calibrated, 0.0, 1.0))
-        except Exception:
-            return float(positive_prob)
+    def _calibrate_confidence(self, positive_prob: float, vec) -> float:
+        calibrated = self.calibrator.predict_proba(vec)[0, 1]
+        return float(np.clip(calibrated, 0.0, 1.0))
 
     def _feature_contributions(self, vec, top_k=8):
         """Return top weighted input features for linear models as local explanations."""
@@ -127,9 +100,9 @@ class Predictor:
 
         positive_prob = float(probs[1]) if len(probs) > 1 else float(probs[0])
         pred_prob = float(max(probs))
-        calibrated_positive_prob = self._calibrate_confidence(positive_prob)
+        calibrated_positive_prob = self._calibrate_confidence(positive_prob, vec)
 
-        label = "Real" if prediction == 1 else "Fake"
+        label = "Real" if calibrated_positive_prob >= 0.5 else "Fake"
         if label == "Real":
             calibrated_conf = calibrated_positive_prob
         else:

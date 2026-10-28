@@ -1,137 +1,54 @@
-# Fake News Detection using NLP
+# Cipher Sentinel
 
-A machine learning system that classifies news articles as real or fake using NLP feature extraction and a scikit-learn classifier, with an optional local LLM layer for natural-language explanations.
+An English news article classifier with a Flask API and a static frontend. It estimates whether article language resembles examples labeled real or fake in research datasets. **It cannot establish that a claim is true or false.**
 
-[![Python](https://img.shields.io/badge/Python-54.6%25-blue)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Backend-Flask-black)](https://flask.palletsprojects.com/)
-[![scikit-learn](https://img.shields.io/badge/ML-scikit--learn-orange)](https://scikit-learn.org/)
-
-## Overview
-
-This project detects misinformation in news text using a classical NLP + machine learning pipeline. It's designed with a clear separation between the deterministic ML model (fast, reproducible) and an optional generative layer (Ollama) that explains predictions in plain English - the system never depends on the LLM to function.
-
-## Key Features
-
-- **Primary prediction engine**: scikit-learn classifier trained on news text features - deterministic and fast
-- **Optional AI explanation layer**: local Ollama models (tinyllama, llama3.2:1b, qwen2.5:0.5b) generate a short natural-language rationale for each prediction, with automatic safe fallback if Ollama is unavailable
-- **Confidence calibration**: a dedicated calibration utility (`src/calibrate_existing`) improves confidence score reliability without full retraining
-- **Bias checking**: includes a `bias_check.py` utility to evaluate model fairness across inputs
-- **Explainability**: LIME-based debugging (`debug_lime.py`) for inspecting model decisions
-- **Production-hardened API**: restricted CORS, request size limits, per-IP rate limiting, minimal error leakage on `/health`, and optional API-key auth
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| ML / Data | Python, scikit-learn, pandas, NumPy |
-| Backend API | Flask |
-| Frontend | HTML, CSS, JavaScript |
-| Optional LLM | Ollama (local inference, e.g. tinyllama) |
-| Explainability | LIME |
-
-## Architecture
-
-- `app/` - Flask backend serving the `/predict` and `/stats` endpoints
-- `src/` - core ML pipeline, including the confidence calibrator
-- `models/` - trained classifier and calibrator artifacts
-- `notebooks/` - exploratory data analysis and model development
-- `frontend/` - client UI for submitting articles and viewing predictions
-- `tests/` - test suite
-
-## Security Hardening
-
-Since this exposes a public-facing prediction API, it includes production safeguards by default:
-
-- Restricted CORS allowlist (localhost + 127.0.0.1 development origins)
-- Request body size limit (`MAX_REQUEST_BYTES`)
-- In-memory per-IP rate limiting
-- Minimal `/health` output (no internal URLs/errors unless explicitly enabled)
-- Structured API responses (`status: success|error`)
-- Secrets (`APP_API_KEY`, `GOOGLE_FACTCHECK_API_KEY`) are server-side only, never exposed to frontend code
-
-### Optional production settings
-
-- `APP_API_KEY`: require `X-API-Key` header for `/predict` and `/stats`
-- `ALLOWED_ORIGINS`: comma-separated trusted frontend origins
-- `APP_HOST`: use `127.0.0.1` by default; avoid `0.0.0.0` unless needed
-- `APP_DEBUG=0`
-- `HEALTH_DETAILS=0`
-
-## Getting Started
+## Run locally
 
 ```bash
-python -m venv venv
-venv\Scripts\activate      # Windows
+python3 -m venv .venv
+. .venv/bin/activate
 pip install -r requirements.txt
 python app/app.py
 ```
 
-### Optional: enable the LLM explanation layer
+Open `http://127.0.0.1:5000/`. The repository includes trained artifacts, so retraining is optional. Load `joblib` model files only from a trusted repository because deserialization can execute code.
 
-```powershell
-$env:OLLAMA_ENABLED='1'
-$env:OLLAMA_MODEL='tinyllama'
-$env:OLLAMA_URL='http://127.0.0.1:11434/api/generate'
-ollama serve
-ollama pull tinyllama
-```
-
-### Optional: improve confidence calibration
+## Reproduce the training and evaluations
 
 ```bash
-python -m src.calibrate_existing
+pip install -r requirements-train.txt
+python -m src.download_datasets
+python main.py
+python -m src.evaluate_bbc
+python -m src.evaluate_liar
+python -m pytest -q
 ```
 
-This creates `models/calibrator.pkl`, loaded automatically by the backend.
+The download script pins each remote dataset revision and checks SHA-256. Files are saved under ignored `data/external/` and are not committed. Training uses bundled [ISOT](https://onlineacademiccommunity.uvic.ca/isot/2022/11/27/fake-news-detection-datasets/) articles and unique articles from [WELFake](https://zenodo.org/records/4561253). The WELFake Parquet mirror's numeric labels are reversed relative to overlapping ISOT articles; training checks 37,653 matching cleaned articles, reverses the labels only when more than 99% disagree, and excludes every overlap. This adds 22,167 unique articles, for 59,820 total after filtering.
 
-## API Response
+The script removes empty, short, duplicate, and conflicting examples. It makes separate article training, validation, calibration, and test sets, grouped by headline **within each source** to reduce near-duplicate leakage. Four logistic regression candidates vary TF–IDF vocabulary size, regularization, and the number of [AG News](https://huggingface.co/datasets/fancyzhx/ag_news/blob/main/README.md) examples. AG News has **topic labels, not fact-check labels**; selected publisher-news snippets serve as weak examples of ordinary real news. Candidate selection keeps models within one F1 point of the best article validation score, then chooses the lowest AG News validation false-positive rate. Sigmoid calibration uses only the article calibration set. The official AG News test split, [BBC](http://mlg.ucd.ie/datasets/bbc.html) full articles, and [LIAR](https://www.cs.ucsb.edu/~william/data/liar_dataset.zip) test claims are excluded from fitting and selection. Split and fitting seeds are fixed in `main.py` and `src/train.py` for reproducibility.
 
-`/predict` returns a structured JSON response including the classification and confidence score. When Ollama is enabled, the response also includes:
+## Measured results
 
-- `llm_explanation`: optional natural-language rationale
-- `llm_provider`: `"ollama"` when an explanation is returned
+| Evaluation | Size | Result |
+|---|---:|---:|
+| Held-out ISOT + new WELFake articles | 5,998 | Accuracy 94.08%; F1 0.9461 |
+| ISOT article subset | 3,765 | F1 0.9769 |
+| New WELFake article subset | 2,233 | F1 0.8935 |
+| AG News official test snippets | 6,665 | 0.86% flagged fake |
+| BBC independent full articles | 2,218 | 2.34% flagged fake |
+| LIAR short political claims | 790 | Accuracy 57.59%; balanced accuracy 52.08% |
 
-## What I Learned
+AG News and BBC are publisher-news stress tests, **not verified truth benchmarks**. The BBC tech subset has the highest false-positive rate at 7.25%. LIAR's majority-class accuracy is 56.84%; the small gain and 52.08% balanced accuracy show weak transfer to short claims. Same-collection article scores can still reflect source and era shortcuts.
 
-Building this project involved balancing model interpretability with production safety - keeping the core classifier deterministic while layering in an optional LLM explanation without introducing a hard dependency, plus hardening a public ML API against common exposure risks (CORS misconfiguration, unbounded request size, missing rate limits).
+Training F1 on article examples is 0.9650 and article validation F1 is 0.9467, a 1.83 percentage-point gap. With 25%, 50%, and 100% of the training examples, validation F1 rises from 0.9211 to 0.9371 to 0.9467. This argues against a severe underfit, while the remaining gap and lower WELFake score indicate some overfit and domain shift. Relative to the best article-only candidate, the selected ordinary-news-augmented model lowers article validation F1 from 0.9531 to 0.9467 and WELFake validation F1 from 0.9139 to 0.8912, while lowering AG News validation false positives from 55.15% to 0.80%. This is a deliberate trade-off for ordinary news coverage. Full candidate scores, split counts, confusion matrices, calibration results, and topic rates are in `models/metrics_v2.json` and on the Evidence page.
 
-## Security Reminders
+## API
 
-- Do NOT put API keys in frontend JavaScript or HTML.
-- Keep `GOOGLE_FACTCHECK_API_KEY` and `APP_API_KEY` server-side only.
+`POST /predict` accepts JSON `{ "text": "...", "use_llm": false }` with 20–2,500 words of English article text. It returns `prediction`, `confidence_calibrated`, `feature_signals`, optional `verification`, and optional `llm_explanation`. `GET /stats` returns saved evaluation results; `GET /health` reports model readiness. Requests can fail with 400 (invalid text), 429 (rate limit), or 503 (model unavailable).
 
-## Backend Reachability Notes (Windows)
+Optional Google Fact Check lookup requires `GOOGLE_FACTCHECK_API_KEY`; no match is not a truth verdict. Optional local Ollama explanations require `OLLAMA_ENABLED=1` and a running Ollama server. LLM text is explanatory only. See `.env.example` for deployment settings including `APP_API_KEY`, `ALLOWED_ORIGINS`, and `APP_HOST`. A browser-only frontend cannot keep an API key secret. Set HTTPS at the reverse proxy. Rate limits are in memory and scoped to one Flask process.
 
-If your backend becomes unreachable when the laptop lid is closed, this is expected for local hosting.
-When Windows enters Sleep/Hibernate, Python/Flask pauses and network access stops.
+## Limits
 
-### Reliable Startup Commands
-
-From project root:
-
-1. Local-only backend (same machine):
-
-	- `./start_backend_local.ps1`
-
-2. LAN backend (other devices in same network):
-
-	- `./start_backend_lan.ps1`
-
-Then verify health:
-
-- `Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing`
-
-### Why It Fails After Closing Laptop
-
-- Lid close usually triggers Sleep/Hibernate.
-- Sleep stops active server work and network stack.
-- Result: frontend or other devices cannot reach Flask until machine wakes.
-
-### If You Need Always-On Access
-
-- Keep machine awake while plugged in (Power settings).
-- Or deploy backend to an always-on host (cloud VM, container platform, etc.).
-
-## License
-
-MIT
+The model was trained on historical English text. It has not been validated for current events, other languages, satire, or standalone claim verification. Check original reporting and independent sources for consequential decisions.

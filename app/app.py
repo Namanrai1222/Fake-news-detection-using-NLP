@@ -46,7 +46,6 @@ OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'tinyllama')
 OLLAMA_TIMEOUT_SECONDS = float(os.environ.get('OLLAMA_TIMEOUT_SECONDS', '20'))
 GOOGLE_FACTCHECK_API_KEY = os.environ.get('GOOGLE_FACTCHECK_API_KEY', '').strip()
-ENSEMBLE_ENABLED = os.environ.get('ENSEMBLE_ENABLED', '1').lower() in ('1', 'true', 'yes', 'on')
 APP_API_KEY = os.environ.get('APP_API_KEY', '').strip()
 HEALTH_DETAILS = os.environ.get('HEALTH_DETAILS', '0').lower() in ('1', 'true', 'yes', 'on')
 MAX_REQUEST_BYTES = int(os.environ.get('MAX_REQUEST_BYTES', str(512 * 1024)))
@@ -61,6 +60,20 @@ ALLOWED_ORIGINS = [
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_REQUEST_BYTES
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=False)
+
+@app.after_request
+def security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; connect-src 'self'; "
+        "img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    )
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 _RATE_STATE = {}
 _RATE_LOCK = threading.Lock()
@@ -197,9 +210,8 @@ def _error_response(message: str, code: int, extra: dict = None):
 
 
 def _client_id():
-    # Respect proxy-forwarded IP when available, else fallback to remote_addr.
-    forwarded = request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
-    return forwarded or (request.remote_addr or 'unknown')
+    # Proxy headers are untrusted unless the deployment explicitly installs ProxyFix.
+    return request.remote_addr or 'unknown'
 
 
 def _is_rate_limited(client: str):
@@ -252,7 +264,7 @@ def _verify_claim(text: str):
     )
     req = urllib.request.Request(endpoint, method='GET')
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- fixed Google HTTPS host
             body = resp.read().decode('utf-8')
             data = json.loads(body) if body else {}
             claims = data.get('claims', [])
@@ -318,62 +330,6 @@ def _latest_calibration_metrics():
         return None, None
 
 
-def _secondary_model_score(text: str, bias_info, feature_signals):
-    """Lightweight secondary scorer used for ensemble blending.
-
-    Returns a probability for the Real class in [0, 1].
-    """
-    text_lower = text.lower()
-
-    # Start from neutral.
-    real_prob = 0.5
-    reasons = []
-
-    # Emotional spikes often correlate with misinformation style.
-    emotion_density = int(bias_info.get('emotion_density', 0))
-    if emotion_density >= 3:
-        real_prob -= 0.12
-        reasons.append("High emotional language reduced trust score.")
-
-    # Presence of source markers can slightly increase traceability.
-    source_hits = len(bias_info.get('indicators', []) or [])
-    if source_hits >= 1:
-        real_prob += 0.06
-        reasons.append("Detected source references increased traceability score.")
-
-    # Very high political density increases manipulation risk.
-    political_density = int(bias_info.get('political_density', 0))
-    if political_density >= 4:
-        real_prob -= 0.08
-        reasons.append("Dense political framing reduced trust score.")
-
-    # If top features are dominated by domain terms, slightly increase confidence.
-    domain_terms = {
-        'inflation', 'policy', 'central bank', 'rate', 'economy', 'official',
-        'statement', 'report', 'regulator', 'ministry'
-    }
-    top_terms = [str(x.get('term', '')).lower() for x in (feature_signals or [])[:6]]
-    if any(any(dt in term for dt in domain_terms) for term in top_terms):
-        real_prob += 0.06
-        reasons.append("Domain-specific terminology increased trust score.")
-
-    # Clickbait patterns reduce trust.
-    clickbait_patterns = ["you won't believe", "shocking", "breaking", "must see", "viral"]
-    if any(p in text_lower for p in clickbait_patterns):
-        real_prob -= 0.12
-        reasons.append("Clickbait phrase pattern reduced trust score.")
-
-    real_prob = float(max(0.02, min(0.98, real_prob)))
-    label = 'Real' if real_prob >= 0.5 else 'Fake'
-    confidence = real_prob if label == 'Real' else (1.0 - real_prob)
-    return {
-        'real_probability': real_prob,
-        'label': label,
-        'confidence': round(float(confidence), 4),
-        'reasons': reasons[:3],
-    }
-
-
 def _build_ollama_prompt(text: str, label: str, confidence: float, bias_risk: str) -> str:
     preview = text[:1200]
     return (
@@ -390,6 +346,11 @@ def _build_ollama_prompt(text: str, label: str, confidence: float, bias_risk: st
 
 def _get_ollama_explanation(text: str, label: str, confidence: float, bias_risk: str, use_llm: bool, model_name: str = None):
     if not use_llm:
+        return None
+
+    parsed_url = urllib.parse.urlparse(OLLAMA_URL)
+    if parsed_url.scheme != 'http' or parsed_url.hostname not in {'127.0.0.1', '::1'} or parsed_url.path != '/api/generate' or parsed_url.username or parsed_url.password:
+        logging.warning('Ollama URL must point to the local generate endpoint.')
         return None
 
     prompt = _build_ollama_prompt(text, label, confidence, bias_risk)
@@ -412,7 +373,7 @@ def _get_ollama_explanation(text: str, label: str, confidence: float, bias_risk:
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=OLLAMA_TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=OLLAMA_TIMEOUT_SECONDS) as resp:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- loopback URL checked above
             body = resp.read().decode('utf-8')
             data = json.loads(body) if body else {}
             explanation = (data.get('response') or '').strip()
@@ -437,18 +398,19 @@ def predict():
     # Treat model_error as fatal only when no usable predictor is available.
     # This avoids blocking requests on non-fatal warmup warnings.
     if model_error and predict_fn is None:
-        return _error_response(f"Engine critical failure: {model_error}", 500)
+        return _error_response("Prediction engine unavailable.", 503)
     if not predict_fn:
         return _error_response("Predictor engine is unresponsive.", 503)
 
     payload = request.get_json(silent=True)
-    if not payload or 'text' not in payload:
+    if not isinstance(payload, dict) or 'text' not in payload:
         return _error_response("Malformed request. Missing 'text' attribute.", 400)
 
+    if not isinstance(payload['text'], str):
+        return _error_response("'text' must be a string.", 400)
     input_text = payload['text'].strip()
     use_llm = _to_bool(payload.get('use_llm'), default=OLLAMA_ENABLED)
-    llm_model = str(payload.get('llm_model', '')).strip() or None
-    use_ensemble = _to_bool(payload.get('use_ensemble'), default=ENSEMBLE_ENABLED)
+    llm_model = None
     
     # Advanced Input Validation
     if not input_text:
@@ -495,63 +457,16 @@ def predict():
         if explain_fn:
             explanation = explain_fn(input_text)
 
-        # Lazy-load optional LIME explainer only after model is already ready.
-        # This prevents startup from getting stuck when optional explainability deps are slow.
-        if explain_fn is None and _predictor_obj is not None:
-            try:
-                from src.explain.lime_explainer import NewsExplainer
-                explainer = NewsExplainer(_predictor_obj.model, _predictor_obj.vectorizer)
-                explain_fn = explainer.explain
-                explanation = explain_fn(input_text)
-            except Exception as lime_exc:
-                logging.warning(f"LIME unavailable; returning prediction without explanation. {lime_exc}")
-
         bias = _check_bias(input_text)
         verification = _verify_claim(input_text)
 
-        secondary = _secondary_model_score(input_text, bias, feature_signals)
+        # This is the calibrated model estimate. The old heuristic blend was not validated.
         final_label = label
         final_confidence = confidence_calibrated
-        ensemble_info = {
-            'enabled': bool(use_ensemble),
-            'weights': {'primary': 0.6, 'secondary': 0.4},
-            'primary_real_probability': round(float(primary_real_prob), 4),
-            'secondary_real_probability': round(float(secondary['real_probability']), 4),
-            'secondary_label': secondary['label'],
-            'secondary_confidence': secondary['confidence'],
-            'secondary_reasons': secondary['reasons'],
-        }
-
-        if use_ensemble:
-            blended_real = (0.6 * primary_real_prob) + (0.4 * secondary['real_probability'])
-            final_label = 'Real' if blended_real >= 0.5 else 'Fake'
-            final_confidence = blended_real if final_label == 'Real' else (1.0 - blended_real)
-            ensemble_info['blended_real_probability'] = round(float(blended_real), 4)
-        else:
-            ensemble_info['blended_real_probability'] = round(float(primary_real_prob), 4)
-
-        ece_metric, _ = _latest_calibration_metrics()
-        reliability_score = float(final_confidence)
-        if ece_metric is not None:
-            reliability_score = max(0.0, min(1.0, reliability_score - (0.5 * ece_metric)))
-
-        if reliability_score >= 0.8:
-            reliability_band = "High"
-        elif reliability_score >= 0.6:
-            reliability_band = "Medium"
-        else:
-            reliability_band = "Low"
-
-        reliability = {
-            "band": reliability_band,
-            "score": round(float(reliability_score), 4),
-            "ece_used": round(float(ece_metric), 4) if ece_metric is not None else None,
-        }
+        reliability_band = 'High' if final_confidence >= 0.8 else ('Medium' if final_confidence >= 0.6 else 'Low')
+        reliability = {'band': reliability_band, 'score': round(final_confidence, 4)}
 
         reasoning = _build_reasoning(label, feature_signals, bias, verification)
-        if use_ensemble and secondary['reasons']:
-            reasoning.extend(secondary['reasons'])
-            reasoning = reasoning[:6]
         llm_explanation = _get_ollama_explanation(
             input_text,
             final_label,
@@ -565,7 +480,7 @@ def predict():
         log_entry = (
             f"Len: {word_count} | Pred: {final_label} | "
             f"ConfRaw: {confidence_raw:.3f} | ConfCal: {confidence_calibrated:.3f} | "
-            f"ConfFinal: {final_confidence:.3f} | Bias: {bias['risk']} | Ensemble: {use_ensemble}"
+            f"ConfFinal: {final_confidence:.3f} | Bias: {bias['risk']}"
         )
         logging.info(log_entry)
 
@@ -578,13 +493,11 @@ def predict():
             "explanation":  explanation,
             "feature_signals": feature_signals,
             "reasoning": reasoning,
-            "ensemble": ensemble_info,
             "reliability": reliability,
             "verification": verification,
             "llm_explanation": llm_explanation,
             "llm_provider": "ollama" if llm_explanation else None,
             "llm_requested": use_llm,
-            "ensemble_requested": use_ensemble,
             "bias_analysis": bias,
             "error": None,
         })
@@ -592,7 +505,7 @@ def predict():
     except Exception as exc:
         logging.error(f"Prediction crashed: {str(exc)}")
         traceback.print_exc()
-        return _error_response(f"Analysis failed: {str(exc)}", 500)
+        return _error_response("Analysis failed. Please try again.", 500)
 
 @app.route('/stats', methods=['GET'])
 def stats():
@@ -600,38 +513,13 @@ def stats():
     if denied:
         return denied
 
-    # Attempt to load the dynamically created stats from Model Training sequence
     metrics_path = os.path.join(ROOT_DIR, "models", "metrics_v2.json")
     try:
-        if os.path.exists(metrics_path):
-            with open(metrics_path, "r") as f:
-                metrics_data = json.load(f)
-                return jsonify({
-                    "status": "success",
-                    "total_articles": 44898,
-                    "model_metrics": metrics_data.get("model_metrics", {}),
-                    "training_date": datetime.now().strftime("%Y-%m-%d"),
-                    "error": None,
-                })
-    except Exception as e:
-        print("Failed reading true metrics:", e)
-        
-    # Fallback structure if models haven't been trained yet
-    return jsonify({
-        "status": "success",
-        "total_articles": 44898,
-        "model_metrics": {
-            "accuracy":      0.0,
-            "precision":     0.0,
-            "recall":        0.0,
-            "f1_score":      0.0,
-            "ece":           0.0,
-            "brier_score":   0.0,
-            "confusion_matrix": [[0,0],[0,0]]
-        },
-        "training_date": "N/A",
-        "error": None,
-    })
+        with open(metrics_path) as file:
+            report = json.load(file)
+        return jsonify({"status": "success", **report})
+    except (OSError, ValueError):
+        return _error_response("Model metrics unavailable.", 503)
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -652,7 +540,6 @@ def health():
             "model_error": model_error,
             "ollama_default_enabled": OLLAMA_ENABLED,
             "ollama_default_model": OLLAMA_MODEL,
-            "ensemble_default_enabled": ENSEMBLE_ENABLED,
         })
 
     return jsonify(base)

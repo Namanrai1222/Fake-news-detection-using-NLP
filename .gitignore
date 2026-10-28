@@ -28,3 +28,12 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+.venv/
+
+.codegraph/
+.env
+.env.*
+!.env.example
+
+data/external/

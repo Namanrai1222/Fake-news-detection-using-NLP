@@ -1,96 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cipher Sentinel | Metrics</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidence — Cipher Sentinel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="top-nav">
-        <div class="brand">Cipher Sentinel</div>
-        <div class="nav-links">
-            <a class="nav-link" href="index.html">Home</a>
-            <a class="nav-link" href="analyzer.html">Analyzer</a>
-            <a class="nav-link active" href="metrics.html">Metrics</a>
-            <a class="nav-link" href="about.html">About</a>
-        </div>
-    </nav>
-
-    <section class="hero glass-panel page-header">
-        <h1 class="glitch-title">Model Performance Core</h1>
-        <p class="subtitle">Live evaluation metrics pulled from backend training artifacts.</p>
-    </section>
-
-    <section class="metrics-eval glass-panel">
-        <h2>Performance Snapshot</h2>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h4>Validation Accuracy</h4>
-                <div class="stat-number" id="val-accuracy">--%</div>
-            </div>
-            <div class="stat-card">
-                <h4>F1 Validation Score</h4>
-                <div class="stat-number" id="val-f1">--</div>
-            </div>
-            <div class="stat-card">
-                <h4>Cross-Validation Run</h4>
-                <div class="stat-number">5-Fold</div>
-            </div>
-            <div class="stat-card">
-                <h4>Dataset Size</h4>
-                <div class="stat-number" id="total-articles">--</div>
-            </div>
-            <div class="stat-card">
-                <h4>Calibration Error (ECE)</h4>
-                <div class="stat-number" id="val-ece">--</div>
-            </div>
-            <div class="stat-card">
-                <h4>Brier Score</h4>
-                <div class="stat-number" id="val-brier">--</div>
-            </div>
-        </div>
-
-        <div class="chart-wrapper">
-            <h3>Confusion Matrix Layout</h3>
-            <div class="matrix-grid">
-                <div class="matrix-cell label-cell"></div>
-                <div class="matrix-cell label-cell">Predicted Fake</div>
-                <div class="matrix-cell label-cell">Predicted Real</div>
-
-                <div class="matrix-cell label-cell">Actual Fake</div>
-                <div class="matrix-cell data-cell" id="cm-00" style="background: rgba(121, 40, 202, 0.2)">--</div>
-                <div class="matrix-cell data-cell" id="cm-01" style="background: rgba(40, 202, 120, 0.2)">--</div>
-
-                <div class="matrix-cell label-cell">Actual Real</div>
-                <div class="matrix-cell data-cell" id="cm-10" style="background: rgba(202, 40, 80, 0.2)">--</div>
-                <div class="matrix-cell data-cell" id="cm-11" style="background: rgba(40, 202, 202, 0.2)">--</div>
-            </div>
-        </div>
-
-        <div class="calibration-panel">
-            <h3>Calibration Trend</h3>
-            <p id="calibration-summary" class="verification-details">Calibration quality will appear here.</p>
-
-            <div class="calibration-row">
-                <span>ECE</span>
-                <div class="mini-track"><div id="ece-bar" class="mini-fill"></div></div>
-                <span id="ece-text">--</span>
-            </div>
-
-            <div class="calibration-row">
-                <span>Brier</span>
-                <div class="mini-track"><div id="brier-bar" class="mini-fill"></div></div>
-                <span id="brier-text">--</span>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <p>Cipher Sentinel v2.0. Built by the Next-Gen Team.</p>
-    </footer>
-
-    <script src="script.js"></script>
-</body>
-</html>
+  <header class="site-header"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">C.</span> Cipher Sentinel</a><nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="analyzer.html">Analyze</a><a aria-current="page" href="metrics.html">Evidence</a><a href="about.html">Method</a></nav></header>
+  <main class="page-shell">
+    <div class="page-intro"><h1>Evidence, with limits.</h1><p>Article tests, ordinary news checks, and a separate claim test show where this model works and where it does not.</p></div>
+    <p id="stats-error" class="field-error" role="alert" hidden></p>
+    <section class="evidence-block"><div class="block-title"><h2>Held-out articles</h2><p id="dataset-note">Loading evaluation details…</p><p>ISOT and new, nonoverlapping WELFake articles were kept outside training and calibration. Matching headlines stay within one split for each source.</p></div><div class="evidence-values"><div><span>Accuracy</span><strong id="val-accuracy">—</strong></div><div><span>F1 score</span><strong id="val-f1">—</strong></div><div><span>Unique labeled articles</span><strong id="total-articles">—</strong></div><div><span>Calibration error</span><strong id="val-ece">—</strong></div><div><span>ISOT F1</span><strong id="isot-f1">—</strong></div><div><span>New WELFake F1</span><strong id="welfake-f1">—</strong></div></div></section>
+    <section class="evidence-block external-block"><div class="block-title"><h2>Ordinary news checks</h2><p>Share flagged as fake in publisher news samples. AG News snippets were used as weak real examples during training; its official test split and the BBC full articles were not.</p><p>These collections have topic labels rather than independent fact-check verdicts.</p></div><div class="evidence-values"><div><span>AG News snippets flagged fake</span><strong id="ag-fpr">—</strong></div><div><span>AG News snippets tested</span><strong id="ag-count">—</strong></div><div><span>BBC full articles flagged fake</span><strong id="bbc-fpr">—</strong></div><div><span>BBC articles tested</span><strong id="bbc-count">—</strong></div></div></section>
+    <section class="evidence-block"><div class="block-title"><h2>Political claim test</h2><p>The official LIAR test subset contains short claims, a different task from article classification. Mixed labels were excluded and no LIAR example was used for training or model selection.</p></div><div class="evidence-values"><div><span>Accuracy</span><strong id="liar-accuracy">—</strong></div><div><span>Majority baseline</span><strong id="liar-baseline">—</strong></div><div><span>Balanced accuracy</span><strong id="liar-balanced">—</strong></div><div><span>Claims tested</span><strong id="liar-count">—</strong></div></div></section>
+    <section class="method-footnote"><h2>Fit check</h2><p id="fit-summary">Loading train and validation results…</p><p>A gap between training and validation scores can signal overfitting. Learning curves show whether more data helps. Neither check proves that the model will generalize to new events or sources.</p><a class="text-link" href="about.html">Read the methodology <span aria-hidden="true">→</span></a></section>
+  </main><footer>Classifier estimates require human verification. <span>© Cipher Sentinel</span></footer><script src="script.js"></script>
+</body></html>

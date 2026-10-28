@@ -1,73 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cipher Sentinel | Home</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cipher Sentinel — Article analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <nav class="top-nav">
-        <div class="brand">Cipher Sentinel</div>
-        <div class="nav-links">
-            <a class="nav-link active" href="index.html">Home</a>
-            <a class="nav-link" href="analyzer.html">Analyzer</a>
-            <a class="nav-link" href="metrics.html">Metrics</a>
-            <a class="nav-link" href="about.html">About</a>
-        </div>
-    </nav>
-
-    <section class="hero glass-panel page-header">
-        <div class="hero-content">
-            <h1 class="glitch-title" data-text="Fake News Detection System">Fake News Detection System</h1>
-            <p class="subtitle">AI-powered content verification & forensic validation protocol</p>
-            <button id="cta-btn" class="neon-btn">Go To Analyzer</button>
-        </div>
-    </section>
-
-    <section class="features glass-panel">
-        <h2>System Capabilities</h2>
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3>Real-time Detection</h3>
-                <p>Lightning-fast classification capabilities driven by an advanced pipeline.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Explainable AI (XAI)</h3>
-                <p>Transparent predictions leveraging LIME logic models.</p>
-            </div>
-            <div class="feature-card">
-                <h3>High Accuracy</h3>
-                <p>Trained iteratively to maximize validation F1 scores.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Secure Processing</h3>
-                <p>Private data evaluation locally hosted within protected silos.</p>
-            </div>
-        </div>
-
-        <div class="quick-links">
-            <a class="quick-card" href="analyzer.html">
-                <h3>Analyzer</h3>
-                <p>Submit article text and run live fake-news inference with explanations.</p>
-            </a>
-            <a class="quick-card" href="metrics.html">
-                <h3>Metrics</h3>
-                <p>Inspect current model quality and confusion matrix values from backend stats.</p>
-            </a>
-            <a class="quick-card" href="about.html">
-                <h3>About</h3>
-                <p>Review architecture, data handling and anti-leakage controls used in the project.</p>
-            </a>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <p>Cipher Sentinel v2.0. Built by the Next-Gen Team.</p>
-    </footer>
-
-    <script src="script.js"></script>
-</body>
-</html>
+  <header class="site-header"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">C.</span> Cipher Sentinel</a><nav aria-label="Main navigation"><a aria-current="page" href="index.html">Overview</a><a href="analyzer.html">Analyze</a><a href="metrics.html">Evidence</a><a href="about.html">Method</a></nav></header>
+  <main>
+    <section class="hero home-hero"><h1>Read the signal.<br>Check the source.</h1><p>Classify the language of a news article, inspect the words behind the estimate, and see exactly how the model was evaluated.</p><a class="primary-action" href="analyzer.html">Analyze an article <span aria-hidden="true">&rarr;</span></a></section>
+    <section class="editorial-strip"><div><h2>A useful first pass,<br>not a verdict.</h2></div><div><p>The classifier estimates whether an article resembles examples labeled real or fake in its training data. It does not independently prove a claim true.</p><a class="text-link" href="about.html">Understand the method <span aria-hidden="true">→</span></a></div></section>
+    <section class="home-links"><a href="analyzer.html"><span>Use the tool</span><strong>Paste an article</strong><span aria-hidden="true">&rarr;</span></a><a href="metrics.html"><span>See the evidence</span><strong>Inspect the test results</strong><span aria-hidden="true">&rarr;</span></a></section>
+  </main><footer>Classifier estimates require human verification. <span>© Cipher Sentinel</span></footer>
+</body></html>
