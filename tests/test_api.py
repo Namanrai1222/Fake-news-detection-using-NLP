@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from unittest.mock import patch
 
 from app import app as backend
@@ -45,3 +47,27 @@ def test_security_headers_present():
 def test_ollama_rejects_remote_url():
     with patch.object(backend, 'OLLAMA_URL', 'https://example.com/api/generate'):
         assert backend._get_ollama_explanation('sample', 'Real', 0.8, 'Low', True) is None
+
+
+def test_wsgi_import_does_not_write_to_read_only_deployment():
+    probe = '''
+import os
+from unittest.mock import patch
+
+exists = os.path.exists
+makedirs = os.makedirs
+
+def read_only_exists(path):
+    return False if str(path).endswith(os.sep + 'logs') else exists(path)
+
+def read_only_makedirs(path, *args, **kwargs):
+    if str(path).endswith(os.sep + 'logs'):
+        raise PermissionError('deployment filesystem is read-only')
+    return makedirs(path, *args, **kwargs)
+
+with patch('os.path.exists', side_effect=read_only_exists), patch('os.makedirs', side_effect=read_only_makedirs):
+    from app.app import app
+assert app is not None
+'''
+    result = subprocess.run([sys.executable, '-c', probe], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr

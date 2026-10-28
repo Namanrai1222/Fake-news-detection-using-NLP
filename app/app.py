@@ -21,13 +21,9 @@ app = Flask(__name__, static_folder=None)
 
 FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend')
 
-# Setup basic file logging for predictions
-LOG_DIR = os.path.join(ROOT_DIR, 'logs')
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
-
+# Runtime logs work locally and on read-only serverless filesystems.
 logging.basicConfig(
-    filename=os.path.join(LOG_DIR, 'predictions.log'),
+    stream=sys.stderr,
     level=logging.INFO,
     format='[%(asctime)s] %(levelname)s - %(message)s'
 )
@@ -476,7 +472,7 @@ def predict():
             model_name=llm_model,
         )
         
-        # Log to file
+        # Log aggregate prediction metadata only.
         log_entry = (
             f"Len: {word_count} | Pred: {final_label} | "
             f"ConfRaw: {confidence_raw:.3f} | ConfCal: {confidence_calibrated:.3f} | "
